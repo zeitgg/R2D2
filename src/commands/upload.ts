@@ -6,7 +6,7 @@ import { uploadFile } from "../utils/uploader";
 import { getConfig } from "../utils/config";
 import type { Config } from "../utils/config";
 
-export const uploadCommand = new Command("upload")
+export const uploadCommand = new Command() // Remove "upload" name
   .description("Upload a file to the configured S3/R2 bucket")
   .allowUnknownOption() // Allow any arguments
   .action(async (...args) => {

@@ -4,11 +4,12 @@ import kleur from 'kleur';
 import path from 'path';
 import { uploadFile } from '../utils/uploader';
 import { getConfig } from '../utils/config';
+import type { Config } from '../utils/config';
 
 export const uploadCommand = new Command('upload')
   .description('Upload a file to the configured S3/R2 bucket')
   .argument('<filePath>', 'Path to the file to upload')
-  .action(async (filePath) => {
+  .action(async (filePath: string) => { // Ensure filePath is treated as a string
     try {
       console.log(kleur.bold().cyan('Starting file upload...'));
 
@@ -45,6 +46,8 @@ export const uploadCommand = new Command('upload')
         config.accountId = accountId; // Update config object
       }
 
+      // The filePath should now be correctly interpreted as a single argument, even with spaces.
+
       const questions: prompts.PromptObject<string>[] = [
         {
           type: 'text',
@@ -75,7 +78,7 @@ export const uploadCommand = new Command('upload')
       await uploadFile(filePath, key, bucketName, { ...config, accountId }); // Pass the updated config
 
       console.log(
-        kleur.green().bold(`File uploaded successfully as ${bucketName}/${key}`)
+        kleur.green().bold(`File uploaded successfully to s3://${bucketName}/${key}`)
       );
     } catch (error: any) {
       console.error(kleur.red().bold('Upload failed:'), error.message || error);

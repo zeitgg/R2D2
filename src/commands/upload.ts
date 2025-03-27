@@ -1,23 +1,23 @@
-import { Command } from 'commander';
-import prompts from 'prompts';
-import kleur from 'kleur';
-import path from 'path';
-import { uploadFile } from '../utils/uploader';
-import { getConfig } from '../utils/config';
-import type { Config } from '../utils/config';
+import { Command } from "commander";
+import prompts from "prompts";
+import kleur from "kleur";
+import path from "path";
+import { uploadFile } from "../utils/uploader";
+import { getConfig } from "../utils/config";
+import type { Config } from "../utils/config";
+import quote from "shell-quote"; // Import shell-quote
 
-export const uploadCommand = new Command('upload')
-  .description('Upload a file to the configured S3/R2 bucket')
-  .argument('<filePath>', 'Path to the file to upload')
-  .action(async (filePath: string) => { // Ensure filePath is treated as a string
+export const uploadCommand = new Command("upload")
+  .description("Upload a file to the configured S3/R2 bucket")
+  .action(async () => {
     try {
-      console.log(kleur.bold().cyan('Starting file upload...'));
+      console.log(kleur.bold().cyan("Starting file upload..."));
 
       const config = getConfig();
       if (!config) {
         console.error(
           kleur.red(
-            'Configuration not found. Please run `configure` first to set up your AWS/R2 credentials.'
+            "Configuration not found. Please run `configure` first to set up your AWS/R2 credentials."
           )
         );
         return;
@@ -28,40 +28,55 @@ export const uploadCommand = new Command('upload')
       if (!accountId) {
         console.warn(
           kleur.yellow(
-            'R2 Account ID is not configured. Please provide it now for R2 uploads.'
+            "R2 Account ID is not configured. Please provide it now for R2 uploads."
           )
         );
         const accountIdResponse = await prompts({
-          type: 'text',
-          name: 'accountId',
-          message: kleur.yellow('R2 Account ID:'),
+          type: "text",
+          name: "accountId",
+          message: kleur.yellow("R2 Account ID:"),
           validate: (value) =>
-            value ? true : kleur.red('Account ID cannot be empty for R2.'),
+            value ? true : kleur.red("Account ID cannot be empty for R2."),
         });
         if (!accountIdResponse.accountId) {
-          console.error(kleur.red('Upload cancelled. Account ID is required for R2.'));
+          console.error(
+            kleur.red("Upload cancelled. Account ID is required for R2.")
+          );
           return; // Exit if accountId is not provided.
         }
         accountId = accountIdResponse.accountId;
         config.accountId = accountId; // Update config object
       }
 
-      // The filePath should now be correctly interpreted as a single argument, even with spaces.
+      // Extract filePath from process.argv using shell-quote
+      const filePath = process.argv.slice(3).join(" "); // Get arguments after 'upload'
+      const parsed = quote.parse(filePath);
+
+      if (parsed.length !== 1) {
+        console.error(
+          kleur.red(
+            "Invalid file path.  Please ensure the file path is correctly quoted if it contains spaces."
+          )
+        );
+        return;
+      }
+
+      const filePathFinal = parsed[0].toString();
 
       const questions: prompts.PromptObject<string>[] = [
         {
-          type: 'text',
-          name: 'key',
-          message: kleur.yellow('Enter the S3 key (path) for the file:'),
-          initial: path.basename(filePath),
+          type: "text",
+          name: "key",
+          message: kleur.yellow("Enter the S3 key (path) for the file:"),
+          initial: path.basename(filePathFinal),
           validate: (value) =>
-            value ? true : kleur.red('Key/path cannot be empty.'),
+            value ? true : kleur.red("Key/path cannot be empty."),
         },
       ];
 
       const answers = await prompts(questions, {
         onCancel: () => {
-          console.log(kleur.red('Upload cancelled.'));
+          console.log(kleur.red("Upload cancelled."));
           process.exit(0); // Exit gracefully
         },
       });
@@ -70,17 +85,22 @@ export const uploadCommand = new Command('upload')
 
       console.log(
         kleur.gray(
-          `Uploading ${kleur.bold(filePath)} to s3://${kleur.bold(
+          `Uploading ${kleur.bold(filePathFinal)} to s3://${kleur.bold(
             bucketName
           )}/${kleur.bold(key)}...`
         )
       );
-      await uploadFile(filePath, key, bucketName, { ...config, accountId }); // Pass the updated config
+      await uploadFile(filePathFinal, key, bucketName, {
+        ...config,
+        accountId,
+      }); // Pass the updated config
 
       console.log(
-        kleur.green().bold(`File uploaded successfully to s3://${bucketName}/${key}`)
+        kleur
+          .green()
+          .bold(`File uploaded successfully to s3://${bucketName}/${key}`)
       );
     } catch (error: any) {
-      console.error(kleur.red().bold('Upload failed:'), error.message || error);
+      console.error(kleur.red().bold("Upload failed:"), error.message || error);
     }
   });

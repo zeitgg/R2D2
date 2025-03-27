@@ -5,7 +5,6 @@ import path from "path";
 import { uploadFile } from "../utils/uploader";
 import { getConfig } from "../utils/config";
 import type { Config } from "../utils/config";
-import quote from "shell-quote"; // Import shell-quote
 
 export const uploadCommand = new Command("upload")
   .description("Upload a file to the configured S3/R2 bucket")
@@ -48,27 +47,27 @@ export const uploadCommand = new Command("upload")
         config.accountId = accountId; // Update config object
       }
 
-      // Extract filePath from process.argv using shell-quote
-      const filePath = process.argv.slice(3).join(" "); // Get arguments after 'upload'
-      const parsed = quote.parse(filePath);
+      // Attempt to extract the file path from process.argv
+      let filePath = process.argv[3]; // Get the argument *after* 'upload'
 
-      if (parsed.length !== 1) {
-        console.error(
-          kleur.red(
-            "Invalid file path.  Please ensure the file path is correctly quoted if it contains spaces."
-          )
-        );
+      if (!filePath) {
+        console.error(kleur.red("File path not provided."));
         return;
       }
 
-      const filePathFinal = parsed[0].toString();
+      // Basic quote removal (handle single or double quotes)
+      if (filePath.startsWith('"') && filePath.endsWith('"')) {
+        filePath = filePath.slice(1, -1);
+      } else if (filePath.startsWith("'") && filePath.endsWith("'")) {
+        filePath = filePath.slice(1, -1);
+      }
 
       const questions: prompts.PromptObject<string>[] = [
         {
           type: "text",
           name: "key",
           message: kleur.yellow("Enter the S3 key (path) for the file:"),
-          initial: path.basename(filePathFinal),
+          initial: path.basename(filePath),
           validate: (value) =>
             value ? true : kleur.red("Key/path cannot be empty."),
         },
@@ -85,20 +84,15 @@ export const uploadCommand = new Command("upload")
 
       console.log(
         kleur.gray(
-          `Uploading ${kleur.bold(filePathFinal)} to s3://${kleur.bold(
+          `Uploading ${kleur.bold(filePath)} as ${kleur.bold(
             bucketName
           )}/${kleur.bold(key)}...`
         )
       );
-      await uploadFile(filePathFinal, key, bucketName, {
-        ...config,
-        accountId,
-      }); // Pass the updated config
+      await uploadFile(filePath, key, bucketName, { ...config, accountId }); // Pass the updated config
 
       console.log(
-        kleur
-          .green()
-          .bold(`File uploaded successfully to s3://${bucketName}/${key}`)
+        kleur.green().bold(`File uploaded successfully as ${bucketName}/${key}`)
       );
     } catch (error: any) {
       console.error(kleur.red().bold("Upload failed:"), error.message || error);

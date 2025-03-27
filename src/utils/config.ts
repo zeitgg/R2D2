@@ -1,15 +1,16 @@
-import fs from "fs";
-import path from "path";
-import os from "os";
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
-const CONFIG_DIR = path.join(os.homedir(), ".r2d2");
-const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
+const CONFIG_DIR = path.join(os.homedir(), '.r2-s3-uploader');
+const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
-interface Config {
+export interface Config {
   accessKeyId: string;
   secretAccessKey: string;
   region: string;
   bucketName: string;
+  accountId?: string; // Add accountId (optional)
 }
 
 export function getConfig(): Config | null {
@@ -17,10 +18,10 @@ export function getConfig(): Config | null {
     if (!fs.existsSync(CONFIG_FILE)) {
       return null;
     }
-    const data = fs.readFileSync(CONFIG_FILE, "utf-8");
+    const data = fs.readFileSync(CONFIG_FILE, 'utf-8');
     return JSON.parse(data);
   } catch (error) {
-    console.error("Error reading config:", error);
+    console.error('Error reading config:', error);
     return null;
   }
 }
@@ -32,6 +33,6 @@ export function setConfig(config: Config): void {
     }
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
   } catch (error) {
-    console.error("Error writing config:", error);
+    console.error('Error writing config:', error);
   }
 }

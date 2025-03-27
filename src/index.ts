@@ -11,6 +11,13 @@ program
   .version("1.0.0");
 
 program.addCommand(configureCommand);
+// Add alias for configure command
+program
+  .command("config")
+  .description("Alias for configure command")
+  .action(() => {
+    configureCommand.parseAsync(process.argv);
+  });
 program.addCommand(uploadCommand);
 
 program.parse(process.argv);

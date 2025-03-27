@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import prompts from "prompts";
+import kleur from "kleur";
 import { uploadFile } from "../utils/uploader";
 import { getConfig } from "../utils/config";
 import path from "path";
@@ -25,9 +26,13 @@ export const uploadCommand = new Command("upload")
         config = { ...config, accountId: accountIdResponse.accountId };
       }
 
-      const { bucketName } = config;
-
       const questions: prompts.PromptObject<string>[] = [
+        {
+          type: "text",
+          name: "bucketName",
+          message: "Enter the bucket name:",
+          validate: (value) => (value ? true : "Bucket name cannot be empty."),
+        },
         {
           type: "text",
           name: "key",
@@ -37,12 +42,16 @@ export const uploadCommand = new Command("upload")
       ];
 
       const answers = await prompts(questions);
-      const { key } = answers;
+      const { key, bucketName } = answers;
 
       await uploadFile(filePath, key, bucketName, config);
 
-      console.log(`File uploaded successfully as ${bucketName}/${key}`);
+      console.log(
+        kleur.bold().green(`✓ Success!`) +
+          ` File uploaded to ${kleur.cyan(bucketName)}/${kleur.yellow(key)}`
+      );
     } catch (error) {
-      console.error("Upload failed:", error);
+      console.error(kleur.bold().red(`✗ Upload failed:`), error instanceof Error ? error.message : String(error));
+      process.exit(1);
     }
   });

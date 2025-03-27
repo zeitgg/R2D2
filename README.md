@@ -37,14 +37,18 @@ r2d2 --help
 ## Commands
 
 ### Configure
-Set up your AWS or R2 credentials and bucket settings.
+
+Set up your AWS/R2 credentials. The bucket name is no longer stored in configuration and will be prompted for each upload.
 
 ```bash
 r2d2 configure
+# or use the alias
+r2d2 config
 ```
 
 ### Upload
-Upload a file to the configured bucket.
+
+Upload a file to an S3/R2 bucket. You'll be prompted for the bucket name for each upload.
 
 ```bash
 r2d2 upload <filePath>
@@ -53,7 +57,11 @@ r2d2 upload <filePath>
 Example:
 
 ```bash
+# Simple file upload
 r2d2 upload ./example.txt
+
+# Files with spaces in the name
+r2d2 upload "./my file with spaces.txt"
 ```
 
 ## Configuration

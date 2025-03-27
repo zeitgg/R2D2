@@ -1,14 +1,13 @@
-import { S3 } from '@aws-sdk/client-s3';
-import fs from 'fs';
-import mime from 'mime-types';
-import { startSpinner, stopSpinner } from './spinner';
+import { S3 } from "@aws-sdk/client-s3";
+import fs from "fs";
+import mime from "mime-types";
+import { startSpinner, stopSpinner } from "./spinner";
 import { Upload } from "@aws-sdk/lib-storage";
 
 interface Config {
   accessKeyId: string;
   secretAccessKey: string;
   region: string;
-  bucketName: string;
   accountId?: string;
 }
 
@@ -26,13 +25,14 @@ export async function uploadFile(
       accessKeyId,
       secretAccessKey,
     },
-    ...(accountId && { // Conditionally add endpoint for R2
+    ...(accountId && {
+      // Conditionally add endpoint for R2
       endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
     }),
   });
 
   const fileStream = fs.createReadStream(filePath);
-  const contentType = mime.lookup(filePath) || 'application/octet-stream';
+  const contentType = mime.lookup(filePath) || "application/octet-stream";
   const fileSize = fs.statSync(filePath).size;
 
   startSpinner(`Uploading ${key}...`);
@@ -45,7 +45,7 @@ export async function uploadFile(
         Key: key,
         Body: fileStream,
         ContentType: contentType,
-        ContentLength: fileSize
+        ContentLength: fileSize,
       },
       queueSize: 4, // optional concurrency configuration
       partSize: 10 * 1024 * 1024, // optional target part size
@@ -54,17 +54,18 @@ export async function uploadFile(
 
     upload.on("httpUploadProgress", (progress) => {
       if (progress.total) {
-        const percentage = progress.loaded !== undefined && progress.total
-          ? Math.round((progress.loaded / progress.total) * 100)
-          : 0;
+        const percentage =
+          progress.loaded !== undefined && progress.total
+            ? Math.round((progress.loaded / progress.total) * 100)
+            : 0;
         startSpinner(`Uploading ${key}... ${percentage}%`);
       }
     });
 
     await upload.done();
-    stopSpinner('File uploaded successfully.');
+    stopSpinner("File uploaded successfully.");
   } catch (error) {
-    stopSpinner('Upload failed.');
+    stopSpinner("Upload failed.");
     throw error;
   }
 }

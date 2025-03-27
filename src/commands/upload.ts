@@ -8,7 +8,9 @@ import type { Config } from "../utils/config";
 
 export const uploadCommand = new Command("upload")
   .description("Upload a file to the configured S3/R2 bucket")
-  .action(async () => {
+  .allowUnknownOption() // Allow any arguments
+  .action(async (...args) => {
+    // Capture all arguments
     try {
       console.log(kleur.bold().cyan("Starting file upload..."));
 
@@ -47,19 +49,23 @@ export const uploadCommand = new Command("upload")
         config.accountId = accountId; // Update config object
       }
 
-      // Attempt to extract the file path from process.argv
-      let filePath = process.argv[3]; // Get the argument *after* 'upload'
+      // Extract file path from arguments
+      const filePath = args[0];
 
-      if (!filePath) {
+      if (!filePath || typeof filePath !== "string") {
         console.error(kleur.red("File path not provided."));
         return;
       }
 
       // Basic quote removal (handle single or double quotes)
-      if (filePath.startsWith('"') && filePath.endsWith('"')) {
-        filePath = filePath.slice(1, -1);
-      } else if (filePath.startsWith("'") && filePath.endsWith("'")) {
-        filePath = filePath.slice(1, -1);
+      let cleanedFilePath = filePath;
+      if (cleanedFilePath.startsWith('"') && cleanedFilePath.endsWith('"')) {
+        cleanedFilePath = cleanedFilePath.slice(1, -1);
+      } else if (
+        cleanedFilePath.startsWith("'") &&
+        cleanedFilePath.endsWith("'")
+      ) {
+        cleanedFilePath = cleanedFilePath.slice(1, -1);
       }
 
       const questions: prompts.PromptObject<string>[] = [
@@ -67,7 +73,7 @@ export const uploadCommand = new Command("upload")
           type: "text",
           name: "key",
           message: kleur.yellow("Enter the S3 key (path) for the file:"),
-          initial: path.basename(filePath),
+          initial: path.basename(cleanedFilePath),
           validate: (value) =>
             value ? true : kleur.red("Key/path cannot be empty."),
         },
@@ -84,12 +90,15 @@ export const uploadCommand = new Command("upload")
 
       console.log(
         kleur.gray(
-          `Uploading ${kleur.bold(filePath)} as ${kleur.bold(
+          `Uploading ${kleur.bold(cleanedFilePath)} as ${kleur.bold(
             bucketName
           )}/${kleur.bold(key)}...`
         )
       );
-      await uploadFile(filePath, key, bucketName, { ...config, accountId }); // Pass the updated config
+      await uploadFile(cleanedFilePath, key, bucketName, {
+        ...config,
+        accountId,
+      }); // Pass the updated config
 
       console.log(
         kleur.green().bold(`File uploaded successfully as ${bucketName}/${key}`)
